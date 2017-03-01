@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>DEMO</title>
+    <script src="scripts/BigInt.js"></script>
+    <script src="scripts/Barrett.js"></script>
+    <script src="scripts/RSA_Stripped.js"></script>
+    <script src="scripts/jquery-1.7.1.min.js"></script>
+    <script src="scripts/qqtea.js"></script>
+    <style>body{text-align:center;}</style>
+  </head>
+  <body>
+    <h1>HTTP 协议环境下 防窃听不防篡改 演示DEMO</h1>
+    <textarea  id="output" style="width: 820px;height: 300px;margin-top: 20px;"></textarea>
+    <p>
+      请自行打开控制台, 在Network中查看 请求和响应内容(做为第三方窃听者), 请还原出来 服务器返回的内容
+    </p>
+    <script>
+      setMaxDigits(262);
+
+      key = new RSAKeyPair(
+        // Public exponent extracted from private_key.pem using
+        // openssl rsa -inform PEM -text -noout < private_key.pem
+        // Or extracted from public key PEM file using
+        // openssl rsa -pubin -inform PEM -text -noout < public_key.pem
+        "10001",
+
+        // Dummy decryption exponent -- actual value only kept on server.
+        "10001",
+
+        // Modulus extracted from private key PEM file using
+        // openssl rsa -inform PEM -modulus -noout < private_key.pem
+        // Or extracted from public key PEM file using
+        // openssl rsa -pubin -inform PEM -modulus -noout < public_key.pem
+        "B6964615B3C1037EECF19FA2366FF77F4B3D89ADF98B341A221E8E50993F458AAD1CFF8C36D7C9CEF81357BD7CEAB3F307154EEB0877B1D11B5DF0D8EB8A16DFA2B02CA4939902DEE9C9982EB23793CF11B03137671DF2E68CB596FF0AE2128CFD630360FF461BBF608B2C0E40EC5E570104F4E3946C52FA64690584013637BDBB4542B05B0A3E6BE0D08021A29A9ABA1F262B31A731B738F4652B0824D2BC5A23AEE8FB85D24F720473C1239400218C480BF811DF91843A23B88BF0283C2ED062B649ADF41AD48D82AECEEFDA594AAB90813F059313CD77B1C67820EFC4EF18450D3986FF94CA71D52EA1EF2A57BE90995007F73FA64EA3BA1DFF250BC250EB",
+
+        // Key size in bits.
+        2048
+      );
+
+      var output = $('#output')[0];
+
+      function genKey(){
+        return '1234567890123456'.replace(/./g, function(){
+          return String.fromCharCode(parseInt((Math.random() * 0xfe) + 1))
+        });
+      }
+
+      function test(){
+        var tk = genKey(); //生成一个随机key,用于约定 QQTEA 的加/解密key
+
+        var etk = encryptedString(key, tk, RSAAPP.PKCS1Padding, RSAAPP.NumericEncoding); //对key进行 RSA 加密
+
+        $.getJSON('demo.php?key=' + etk, function(v){ //将加密后的数据发给服务器
+          output.value += 'HTTP响应中的数据:\t' + v.data + '\n';
+          output.value += '还原后的数据:\t\t' + decrypt(tk, hex2bin(v.data)) + '\n'; //服务器解RSA后,得到Key,然后用KEY使用QQTEA加密数据后返回,客户接收之后用QQTEA解密,得到原文
+
+          setTimeout(test, 2000); //每隔两秒调用一次 Only for demo
+        })
+      }
+
+      test();
+    </script>
+  </body>
+</html>
+
